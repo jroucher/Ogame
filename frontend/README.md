@@ -1,59 +1,108 @@
-# Frontend
+# OGame Bot - Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.19.
+Panel de control web para el bot de OGame, construido con Angular 19.
 
-## Development server
+## Características
 
-To start a local development server, run:
+- **Dashboard interactivo** - Visualización de recursos, planetas y estado del bot
+- **Control del Scheduler** - Iniciar/detener y configurar tareas programadas
+- **Feature Flags** - Sistema de flags para habilitar/deshabilitar funcionalidades
+- **Diseño moderno** - Interfaz oscura inspirada en el estilo de OGame
+
+## Estructura del Proyecto
+
+```
+src/app/
+├── components/
+│   └── dashboard/          # Componente principal del dashboard
+├── services/
+│   └── api.service.ts      # Servicio de comunicación con el backend
+├── config/
+│   └── feature-flags.config.ts  # Configuración de feature flags
+├── app.component.ts        # Componente raíz
+├── app.config.ts           # Configuración de la aplicación
+└── app.routes.ts           # Rutas de la aplicación
+```
+
+## Desarrollo
+
+### Servidor de desarrollo
 
 ```bash
+npm start
+# o
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+La aplicación estará disponible en `http://localhost:4200/`. Se recargará automáticamente al modificar archivos.
 
-## Code scaffolding
+### Requisitos
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- El backend debe estar ejecutándose en `http://localhost:3000`
+- Node.js 18+ recomendado
 
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### Generar componentes
 
 ```bash
-ng generate --help
+ng generate component components/nombre-componente
 ```
 
-## Building
-
-To build the project run:
+### Build de producción
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Los artefactos se generan en `dist/`.
 
-## Running unit tests
+## Feature Flags
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+El sistema de feature flags permite habilitar/deshabilitar funcionalidades:
 
-```bash
-ng test
-```
+| Flag | Estado | Descripción |
+|------|--------|-------------|
+| `maximize-mines` | ✅ Habilitado | Maximización automática de minas |
+| `expansion-policy` | ❌ Deshabilitado | Política expansionista (en desarrollo) |
 
-## Running end-to-end tests
+Configuración en `src/app/config/feature-flags.config.ts`.
 
-For end-to-end (e2e) testing, run:
+## Servicios Disponibles
 
-```bash
-ng e2e
-```
+### ApiService
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Servicio principal para comunicación con el backend:
 
-## Additional Resources
+- `getStatus()` - Estado del bot
+- `login()` / `manualLogin()` - Autenticación
+- `getResources()` - Recursos actuales
+- `getPlanets()` - Lista de planetas
+- `getStorageInfo()` - Información de almacenes
+- `getTasks()` - Tareas programadas
+- `getSchedulerStatus()` - Estado del scheduler
+- `startScheduler()` / `stopScheduler()` - Control del scheduler
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Tecnologías
+
+- **Angular 19** - Framework principal
+- **TypeScript** - Lenguaje de programación
+- **SCSS** - Estilos
+- **Signals** - Gestión de estado reactivo
+- **Standalone Components** - Arquitectura de componentes
+
+## Scripts Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm start` | Inicia servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm test` | Ejecuta tests unitarios |
+| `npm run watch` | Build en modo watch |
+
+## Recursos Adicionales
+
+- [Angular CLI](https://angular.dev/tools/cli) - Documentación oficial
+- [Angular Signals](https://angular.dev/guide/signals) - Guía de signals
+
+---
+
+*Última actualización: Febrero 2026*

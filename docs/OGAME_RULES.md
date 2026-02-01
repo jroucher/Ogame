@@ -456,7 +456,12 @@ Necesario para investigar tecnologías. Nivel más alto = investigaciones más r
 - [OGame Fandom](https://ogame.fandom.com/)
 - [Calculadora de OGame](https://trashsim.oplanet.eu/)
 
+## Documentación Relacionada
+
+- `docs/BUILDING_SELECTION_LOGIC.md` - Lógica de selección de edificios para construcción
+- `docs/EXPANSION_POLICY.md` - Estrategias de colonización y expansión
+
 ---
 
 *Documento generado para el proyecto OGame Bot*
-*Última actualización: Enero 2026*
+*Última actualización: Febrero 2026*

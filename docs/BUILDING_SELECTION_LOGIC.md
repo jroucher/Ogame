@@ -216,3 +216,9 @@ El deuterio vale 3x más que el metal porque:
 - `backend/src/scheduler/task-scheduler.ts` - Lógica del scheduler y ejecución
 - `backend/src/game/ogame-formulas.ts` - Fórmulas de cálculo y algoritmo de decisión
 - `docs/OGAME_RULES.md` - Reglas y fórmulas del juego OGame
+- `docs/EXPANSION_POLICY.md` - Estrategias de colonización y expansión
+
+---
+
+*Documento generado para el proyecto OGame Bot*
+*Última actualización: Febrero 2026*
