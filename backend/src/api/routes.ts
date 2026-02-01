@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ogameClient } from '../browser/ogame-client.js';
 import { browserManager } from '../browser/browser-manager.js';
 import { taskScheduler } from '../scheduler/task-scheduler.js';
+import { expansionPolicy, galaxyScanner } from '../expansion/index.js';
 
 export const router = Router();
 
@@ -181,5 +182,91 @@ router.post('/scheduler/stop', (_req: Request, res: Response) => {
     res.json({ success: true, message: 'Scheduler detenido' });
   } catch (error) {
     res.status(500).json({ error: 'Error deteniendo scheduler' });
+  }
+});
+
+// ========== POLÍTICA EXPANSIONISTA ==========
+
+// Obtener estado de la política expansionista
+router.get('/expansion/status', async (_req: Request, res: Response) => {
+  try {
+    const status = await expansionPolicy.getStatus();
+    if (status) {
+      res.json(status);
+    } else {
+      res.status(400).json({ error: 'No se pudo obtener el estado de expansión' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo estado de expansión' });
+  }
+});
+
+// Obtener configuración de expansión
+router.get('/expansion/config', (_req: Request, res: Response) => {
+  try {
+    const config = expansionPolicy.getConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo configuración' });
+  }
+});
+
+// Actualizar configuración de expansión
+router.put('/expansion/config', (req: Request, res: Response) => {
+  try {
+    const updates = req.body;
+    expansionPolicy.updateConfig(updates);
+    res.json(expansionPolicy.getConfig());
+  } catch (error) {
+    res.status(500).json({ error: 'Error actualizando configuración' });
+  }
+});
+
+// Escanear sistemas cercanos
+router.post('/expansion/scan', async (req: Request, res: Response) => {
+  try {
+    const { radius } = req.body;
+    if (radius) {
+      expansionPolicy.updateConfig({ scanRadius: radius });
+    }
+    const targets = await expansionPolicy.scanAndGetTargets();
+    res.json({
+      success: true,
+      targetsFound: targets.length,
+      targets: targets.slice(0, 20),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error escaneando sistemas' });
+  }
+});
+
+// Obtener objetivos de colonización en caché
+router.get('/expansion/targets', (_req: Request, res: Response) => {
+  try {
+    const targets = expansionPolicy.getCachedTargets();
+    res.json(targets);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo objetivos' });
+  }
+});
+
+// Ejecutar política expansionista manualmente
+router.post('/expansion/execute', async (_req: Request, res: Response) => {
+  try {
+    const result = await expansionPolicy.execute();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Error ejecutando política expansionista' });
+  }
+});
+
+// Limpiar caché de escaneo
+router.post('/expansion/clear-cache', (_req: Request, res: Response) => {
+  try {
+    expansionPolicy.clearCache();
+    galaxyScanner.clearCache();
+    res.json({ success: true, message: 'Caché limpiada' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error limpiando caché' });
   }
 });

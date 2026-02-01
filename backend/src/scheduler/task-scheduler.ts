@@ -12,6 +12,7 @@ import {
   determineStorageNeeded,
   getStorageUpgradeStats,
 } from '../game/ogame-formulas.js';
+import { expansionPolicy } from '../expansion/index.js';
 
 export interface ScheduledTask {
   id: string;
@@ -44,6 +45,14 @@ export class TaskScheduler {
       name: 'Maximizar Minas',
       enabled: false,
       interval: 1, // cada 1 minuto
+    });
+
+    // Tarea de política expansionista
+    this.addTask({
+      id: 'expansion-policy',
+      name: 'Política Expansionista',
+      enabled: false,
+      interval: 30, // cada 30 minutos
     });
   }
 
@@ -163,6 +172,8 @@ export class TaskScheduler {
       switch (taskId) {
         case 'maximize-mines':
           return await this.executeMaximizeMines();
+        case 'expansion-policy':
+          return await this.executeExpansionPolicy();
         default:
           return { success: false, message: 'Tarea desconocida' };
       }
@@ -272,7 +283,9 @@ export class TaskScheduler {
       // Calcular balance de energía actual
       const energyBalance = calculateEnergyBalance(levels);
       console.log(`\n⚡ Balance de energía:`);
-      console.log(`   - Producción: ${energyBalance.production}`);
+      console.log(`   - Planta Solar: ${energyBalance.solarPlantProduction}`);
+      console.log(`   - Satélites Solares (${levels.solarSatellites}): ${energyBalance.solarSatelliteProduction}`);
+      console.log(`   - Producción Total: ${energyBalance.production}`);
       console.log(`   - Consumo: ${energyBalance.consumption}`);
       console.log(`   - Balance: ${energyBalance.balance}`);
 
@@ -357,6 +370,7 @@ export class TaskScheduler {
         crystal: 0,
         deuterium: 0,
         solar: 0,
+        solarSatellites: 0,
       };
 
       // Selectores para obtener el nivel de cada mina
@@ -441,10 +455,57 @@ export class TaskScheduler {
         }
       }
 
+      // Obtener cantidad de satélites solares desde la página de resourcesettings
+      levels.solarSatellites = await this.getSolarSatelliteCount();
+      console.log(`   - solarSatellites: ${levels.solarSatellites}`);
+
       return levels;
     } catch (error) {
       console.error('❌ Error obteniendo niveles de minas:', error);
       return null;
+    }
+  }
+
+  private async getSolarSatelliteCount(): Promise<number> {
+    if (!ogameClient.page) return 0;
+
+    try {
+      // Navegar a la página de resourcesettings para obtener la cantidad de satélites solares
+      const currentUrl = ogameClient.page.url();
+      if (!currentUrl.includes('component=resourcesettings')) {
+        await ogameClient.page.goto(currentUrl.split('?')[0] + '?page=ingame&component=resourcesettings');
+        await ogameClient.page.waitForLoadState('networkidle');
+        await ogameClient.page.waitForTimeout(1000);
+      }
+
+      // Buscar la fila de "Satélite solar" en la tabla de resourcesettings
+      // El texto puede ser "Satélite solar (Cantidad: X)" donde X es el número de satélites
+      const satelliteRow = ogameClient.page.locator('tr:has-text("Satélite solar"), tr:has-text("Solar Satellite")').first();
+      
+      if (await satelliteRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const rowText = await satelliteRow.textContent() || '';
+        // Buscar el patrón "Cantidad: X" o "(X)" en el texto
+        const quantityMatch = rowText.match(/Cantidad:\s*(\d+)/i) || rowText.match(/\((\d+)\)/);
+        if (quantityMatch) {
+          const count = parseInt(quantityMatch[1]) || 0;
+          return count;
+        }
+      }
+
+      // Método alternativo: buscar en el selector específico de la tabla
+      const satelliteCell = ogameClient.page.locator('table tr').filter({ hasText: /Satélite solar|Solar Satellite/ }).first();
+      if (await satelliteCell.isVisible({ timeout: 2000 }).catch(() => false)) {
+        const cellText = await satelliteCell.textContent() || '';
+        const match = cellText.match(/Cantidad:\s*(\d+)/i) || cellText.match(/\((\d+)\)/);
+        if (match) {
+          return parseInt(match[1]) || 0;
+        }
+      }
+
+      return 0;
+    } catch (error) {
+      console.error('❌ Error obteniendo cantidad de satélites solares:', error);
+      return 0;
     }
   }
 
@@ -1003,6 +1064,39 @@ export class TaskScheduler {
       isRunning: this.isRunning,
       tasks: this.getTasks(),
     };
+  }
+
+  private async executeExpansionPolicy(): Promise<TaskResult> {
+    try {
+      console.log('\n🌍 ========== POLÍTICA EXPANSIONISTA ==========');
+
+      // Habilitar temporalmente la política para esta ejecución
+      const currentConfig = expansionPolicy.getConfig();
+      if (!currentConfig.enabled) {
+        expansionPolicy.updateConfig({ enabled: true });
+      }
+
+      const result = await expansionPolicy.execute();
+
+      // Restaurar estado original
+      if (!currentConfig.enabled) {
+        expansionPolicy.updateConfig({ enabled: false });
+      }
+
+      const resources = await ogameClient.getResources();
+
+      return {
+        success: result.success,
+        message: result.message,
+        resources: resources || undefined,
+      };
+    } catch (error) {
+      console.error('❌ Error en política expansionista:', error);
+      return {
+        success: false,
+        message: `Error en política expansionista: ${error}`,
+      };
+    }
   }
 }
 

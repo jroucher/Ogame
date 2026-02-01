@@ -1,7 +1,8 @@
-import { Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { ApiService, BotStatus, Resources, Planet, StorageInfo } from '../../services/api.service';
 import { interval, Subscription } from 'rxjs';
+import { isFeatureEnabled } from '../../config/feature-flags.config';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,12 +20,6 @@ import { interval, Subscription } from 'rxjs';
       <section class="controls">
         <h2>Controles</h2>
         <div class="button-group">
-          <button
-            (click)="login()"
-            [disabled]="loading() || status()?.loggedIn"
-            class="btn btn-primary">
-            {{ loading() ? 'Conectando...' : 'Login Automático' }}
-          </button>
           <button
             (click)="manualLogin()"
             [disabled]="loading() || status()?.loggedIn"
@@ -124,7 +119,7 @@ import { interval, Subscription } from 'rxjs';
           }
 
           <div class="tasks-list">
-            @for (task of tasks(); track task.id) {
+            @for (task of visibleTasks(); track task.id) {
               <div class="task-card" [class.active]="task.enabled">
                 <div class="task-info">
                   <h3>{{ task.name }}</h3>
@@ -517,6 +512,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   resources = signal<Resources | null>(null);
   planets = signal<Planet[]>([]);
   tasks = signal<any[]>([]);
+  visibleTasks = computed(() => this.tasks().filter((task) => isFeatureEnabled(task.id)));
   schedulerStatus = signal<any>(null);
   storageInfo = signal<StorageInfo | null>(null);
   loading = signal(false);

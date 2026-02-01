@@ -69,6 +69,7 @@ export interface MineLevels {
   crystal: number;
   deuterium: number;
   solar: number;
+  solarSatellites: number;
 }
 
 /**
@@ -163,6 +164,17 @@ export function calculateSolarPlantProductionIncrease(currentLevel: number): num
 }
 
 /**
+ * Calcula la producción de energía de los satélites solares
+ * Cada satélite produce una cantidad fija de energía (depende de la temperatura del planeta)
+ * Fórmula: floor((Tmax + 160) / 6) por satélite
+ * Para simplificar, usamos un valor promedio de 40 energía por satélite (temperatura ~80°C)
+ */
+export function calculateSolarSatelliteProduction(count: number, maxTemperature: number = 80): number {
+  const energyPerSatellite = Math.floor((maxTemperature + 160) / 6);
+  return count * energyPerSatellite;
+}
+
+/**
  * Calcula el ROI (Retorno de Inversión) en horas
  * ROI = Costo total / Incremento de producción por hora
  */
@@ -200,13 +212,18 @@ export function calculateROI(
 
 /**
  * Calcula el balance de energía actual
+ * Incluye producción de planta solar + satélites solares
  */
-export function calculateEnergyBalance(levels: MineLevels): {
+export function calculateEnergyBalance(levels: MineLevels, maxTemperature: number = 80): {
   production: number;
   consumption: number;
   balance: number;
+  solarPlantProduction: number;
+  solarSatelliteProduction: number;
 } {
-  const production = calculateSolarPlantProduction(levels.solar);
+  const solarPlantProduction = calculateSolarPlantProduction(levels.solar);
+  const solarSatelliteProduction = calculateSolarSatelliteProduction(levels.solarSatellites, maxTemperature);
+  const production = solarPlantProduction + solarSatelliteProduction;
   const consumption = 
     calculateEnergyConsumption('metalMine', levels.metal) +
     calculateEnergyConsumption('crystalMine', levels.crystal) +
@@ -216,6 +233,8 @@ export function calculateEnergyBalance(levels: MineLevels): {
     production,
     consumption,
     balance: production - consumption,
+    solarPlantProduction,
+    solarSatelliteProduction,
   };
 }
 
