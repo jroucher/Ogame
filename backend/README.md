@@ -9,18 +9,19 @@ API REST y motor de automatización para el bot de OGame, construido con Node.js
 - **Scheduler de Tareas** - Sistema de tareas programadas con intervalos configurables
 - **Fórmulas de OGame** - Cálculos precisos de costos, producción y ROI
 - **Módulo de Expansión** - Sistema de colonización y exploración de galaxias
+- **Módulo de Minas** - Maximización inteligente de minas basada en ROI
 
 ## Estructura del Proyecto
 
 ```
 src/
 ├── api/
-│   └── routes.ts           # Definición de endpoints REST
+│   └── routes.ts               # Definición de endpoints REST
 ├── browser/
-│   ├── browser-manager.ts  # Gestión del navegador Playwright
-│   └── ogame-client.ts     # Cliente para interactuar con OGame
+│   ├── browser-manager.ts      # Gestión del navegador Playwright
+│   └── ogame-client.ts         # Cliente para interactuar con OGame
 ├── config/
-│   └── index.ts            # Configuración del servidor
+│   └── index.ts                # Configuración del servidor
 ├── expansion/
 │   ├── expansion-policy.ts     # Lógica de política expansionista
 │   ├── expansion-types.ts      # Tipos e interfaces
@@ -28,10 +29,14 @@ src/
 │   ├── colonization-manager.ts # Gestión de colonización
 │   └── index.ts                # Exports del módulo
 ├── game/
-│   └── ogame-formulas.ts   # Fórmulas matemáticas del juego
+│   └── ogame-formulas.ts       # Fórmulas matemáticas del juego
+├── mines/
+│   ├── maximize-mines-policy.ts # Lógica de maximización de minas
+│   ├── mines-utils.ts          # Utilidades para minas y almacenes
+│   └── index.ts                # Exports del módulo
 ├── scheduler/
-│   └── task-scheduler.ts   # Sistema de tareas programadas
-└── index.ts                # Punto de entrada del servidor
+│   └── task-scheduler.ts       # Sistema de tareas programadas
+└── index.ts                    # Punto de entrada del servidor
 ```
 
 ## Instalación
@@ -116,6 +121,17 @@ BASE_PRODUCTION = {
   solarPlant: 20,
 }
 ```
+
+### Mines Module
+
+Módulo de maximización de minas:
+- **MaximizeMinesPolicy** - Lógica principal de construcción de minas
+- **mines-utils** - Funciones auxiliares:
+  - `getMineLevels()` - Obtener niveles actuales de minas
+  - `getStorageLevels()` - Obtener niveles de almacenes
+  - `buildMine()` - Construir una mina
+  - `buildStorage()` - Construir un almacén
+  - `checkIfSomethingInProduction()` - Verificar construcción en curso
 
 ### Expansion Module
 
@@ -205,14 +221,14 @@ POST /api/expansion/clear-cache    # Limpiar caché
         ┌─────────────────────┼─────────────────────┐
         ▼                     ▼                     ▼
 ┌───────────────┐   ┌─────────────────┐   ┌───────────────┐
-│  OGame Client │   │  Task Scheduler │   │   Expansion   │
-│               │   │                 │   │    Policy     │
-└───────┬───────┘   └────────┬────────┘   └───────────────┘
-        │                    │
-        ▼                    ▼
-┌───────────────┐   ┌─────────────────┐
-│    Browser    │   │  OGame Formulas │
-│    Manager    │   │                 │
+│  OGame Client │   │  Task Scheduler │   │    Policies   │
+│               │   │                 │   │               │
+└───────┬───────┘   └────────┬────────┘   └───────┬───────┘
+        │                    │                     │
+        ▼                    ▼               ┌─────┴─────┐
+┌───────────────┐   ┌─────────────────┐   │           │
+│    Browser    │   │  OGame Formulas │   ▼           ▼
+│    Manager    │   │                 │  mines/   expansion/
 └───────┬───────┘   └─────────────────┘
         │
         ▼

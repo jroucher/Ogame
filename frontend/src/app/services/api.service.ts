@@ -33,6 +33,74 @@ export interface StorageInfo {
   };
 }
 
+export interface DataSyncStatus {
+  enabled: boolean;
+  isUpdating: boolean;
+  lastUpdate: string;
+  intervalSeconds: number;
+  dataAge: number;
+}
+
+export interface DataSyncConfig {
+  enabled: boolean;
+  intervalSeconds: number;
+  syncBuildings: boolean;
+  syncTechnologies: boolean;
+  syncFleet: boolean;
+  syncDefense: boolean;
+}
+
+export interface MineLevels {
+  metal: number;
+  crystal: number;
+  deuterium: number;
+  solar: number;
+  solarSatellites: number;
+}
+
+export interface TechnologyLevels {
+  energyTechnology?: number;
+  laserTechnology?: number;
+  ionTechnology?: number;
+  hyperspaceTechnology?: number;
+  plasmaTechnology?: number;
+  combustionDrive?: number;
+  impulseDrive?: number;
+  hyperspaceDrive?: number;
+  espionageTechnology?: number;
+  computerTechnology?: number;
+  astrophysics?: number;
+  weaponsTechnology?: number;
+  shieldingTechnology?: number;
+  armourTechnology?: number;
+}
+
+export interface PlanetGameData {
+  id: string;
+  name: string;
+  coordinates: string;
+  mineLevels: MineLevels;
+  storageLevels: {
+    metal: number;
+    crystal: number;
+    deuterium: number;
+  };
+  resources: {
+    metal: number;
+    crystal: number;
+    deuterium: number;
+    energy: number;
+  };
+}
+
+export interface GameDataResponse {
+  lastUpdate: string;
+  isUpdating: boolean;
+  planets: PlanetGameData[];
+  technologies: TechnologyLevels;
+  currentPlanetId: string | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -100,5 +168,46 @@ export class ApiService {
 
   getStorageInfo(): Observable<StorageInfo> {
     return this.http.get<StorageInfo>(`${this.baseUrl}/storage`);
+  }
+
+  // ========== SINCRONIZACIÓN DE DATOS ==========
+
+  getDataSyncStatus(): Observable<DataSyncStatus> {
+    return this.http.get<DataSyncStatus>(`${this.baseUrl}/data-sync/status`);
+  }
+
+  getDataSyncConfig(): Observable<DataSyncConfig> {
+    return this.http.get<DataSyncConfig>(`${this.baseUrl}/data-sync/config`);
+  }
+
+  updateDataSyncConfig(config: Partial<DataSyncConfig>): Observable<DataSyncConfig> {
+    return this.http.put<DataSyncConfig>(`${this.baseUrl}/data-sync/config`, config);
+  }
+
+  startDataSync(intervalSeconds?: number): Observable<{ success: boolean; message: string; config: DataSyncConfig }> {
+    return this.http.post<{ success: boolean; message: string; config: DataSyncConfig }>(
+      `${this.baseUrl}/data-sync/start`,
+      { intervalSeconds }
+    );
+  }
+
+  stopDataSync(): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(`${this.baseUrl}/data-sync/stop`, {});
+  }
+
+  syncDataNow(): Observable<{ success: boolean; data: any }> {
+    return this.http.post<{ success: boolean; data: any }>(`${this.baseUrl}/data-sync/sync-now`, {});
+  }
+
+  getGameData(): Observable<GameDataResponse> {
+    return this.http.get<GameDataResponse>(`${this.baseUrl}/data-sync/game-data`);
+  }
+
+  getCachedMineLevels(): Observable<MineLevels> {
+    return this.http.get<MineLevels>(`${this.baseUrl}/data-sync/mine-levels`);
+  }
+
+  getCachedTechnologies(): Observable<TechnologyLevels> {
+    return this.http.get<TechnologyLevels>(`${this.baseUrl}/data-sync/technologies`);
   }
 }

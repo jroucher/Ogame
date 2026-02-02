@@ -22,6 +22,7 @@ Ogame/
 │   │   ├── config/         # Configuración del servidor
 │   │   ├── expansion/      # Módulo de política expansionista
 │   │   ├── game/           # Fórmulas y lógica del juego
+│   │   ├── mines/          # Módulo de maximización de minas
 │   │   └── scheduler/      # Sistema de tareas programadas
 │   └── .env.example        # Plantilla de configuración
 ├── frontend/               # Panel de control Angular 19

@@ -3,6 +3,7 @@ import { ogameClient } from '../browser/ogame-client.js';
 import { browserManager } from '../browser/browser-manager.js';
 import { taskScheduler } from '../scheduler/task-scheduler.js';
 import { expansionPolicy, galaxyScanner } from '../expansion/index.js';
+import { gameDataService } from '../data-sync/index.js';
 
 export const router = Router();
 
@@ -268,5 +269,106 @@ router.post('/expansion/clear-cache', (_req: Request, res: Response) => {
     res.json({ success: true, message: 'Caché limpiada' });
   } catch (error) {
     res.status(500).json({ error: 'Error limpiando caché' });
+  }
+});
+
+// ========== SINCRONIZACIÓN DE DATOS ==========
+
+// Obtener estado de la sincronización de datos
+router.get('/data-sync/status', (_req: Request, res: Response) => {
+  try {
+    const status = gameDataService.getStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo estado de sincronización' });
+  }
+});
+
+// Obtener configuración de sincronización
+router.get('/data-sync/config', (_req: Request, res: Response) => {
+  try {
+    const config = gameDataService.getConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo configuración' });
+  }
+});
+
+// Actualizar configuración de sincronización
+router.put('/data-sync/config', (req: Request, res: Response) => {
+  try {
+    const updates = req.body;
+    const config = gameDataService.updateConfig(updates);
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Error actualizando configuración' });
+  }
+});
+
+// Iniciar sincronización de datos
+router.post('/data-sync/start', (req: Request, res: Response) => {
+  try {
+    const { intervalSeconds } = req.body;
+    if (intervalSeconds) {
+      gameDataService.updateConfig({ intervalSeconds });
+    }
+    gameDataService.updateConfig({ enabled: true });
+    res.json({ success: true, message: 'Sincronización iniciada', config: gameDataService.getConfig() });
+  } catch (error) {
+    res.status(500).json({ error: 'Error iniciando sincronización' });
+  }
+});
+
+// Detener sincronización de datos
+router.post('/data-sync/stop', (_req: Request, res: Response) => {
+  try {
+    gameDataService.updateConfig({ enabled: false });
+    res.json({ success: true, message: 'Sincronización detenida' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error deteniendo sincronización' });
+  }
+});
+
+// Forzar sincronización inmediata
+router.post('/data-sync/sync-now', async (_req: Request, res: Response) => {
+  try {
+    const data = await gameDataService.syncAllData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Error sincronizando datos' });
+  }
+});
+
+// Obtener datos cacheados del juego
+router.get('/data-sync/game-data', (_req: Request, res: Response) => {
+  try {
+    const data = gameDataService.getGameData();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo datos del juego' });
+  }
+});
+
+// Obtener niveles de minas cacheados
+router.get('/data-sync/mine-levels', (_req: Request, res: Response) => {
+  try {
+    const levels = gameDataService.getMineLevelsFromCache();
+    if (levels) {
+      res.json(levels);
+    } else {
+      res.status(404).json({ error: 'No hay datos de minas en caché' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo niveles de minas' });
+  }
+});
+
+// Obtener tecnologías cacheadas
+router.get('/data-sync/technologies', (_req: Request, res: Response) => {
+  try {
+    const technologies = gameDataService.getTechnologiesFromCache();
+    res.json(technologies);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo tecnologías' });
   }
 });

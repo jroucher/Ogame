@@ -383,6 +383,7 @@ export function determineBestMineToBuild(
   reason: string;
   stats: MineStats | null;
   alternatives: Array<{ type: string; reason: string; stats: MineStats }>;
+  canAfford?: boolean;
 } {
   const alternatives: Array<{ type: string; reason: string; stats: MineStats }> = [];
   
@@ -415,16 +416,7 @@ export function determineBestMineToBuild(
   }
   
   // REGLA 2: Verificar si podemos pagar cada mina
-  // Separamos la verificación de recursos de la verificación de energía
-  
-  // Debug: mostrar valores para diagnóstico
-  console.log(`\n🔍 Debug canAfford:`);
-  console.log(`   Recursos: metal=${resources.metal}, crystal=${resources.crystal}, energy=${resources.energy}`);
-  console.log(`   Metal mine: costo=${metalStats.cost.metal}/${metalStats.cost.crystal}, energyInc=${metalStats.energyConsumption}`);
-  console.log(`   Crystal mine: costo=${crystalStats.cost.metal}/${crystalStats.cost.crystal}, energyInc=${crystalStats.energyConsumption}`);
-  console.log(`   Deuterium mine: costo=${deuteriumStats.cost.metal}/${deuteriumStats.cost.crystal}, energyInc=${deuteriumStats.energyConsumption}`);
-  console.log(`   Solar plant: costo=${solarStats.cost.metal}/${solarStats.cost.crystal}`);
-  
+  // Separamos la verificación de recursos de la verificación de energía  
   // Verificar si podemos pagar con recursos (sin considerar energía)
   const canAffordResources = {
     metal: resources.metal >= metalStats.cost.metal && resources.crystal >= metalStats.cost.crystal,
@@ -507,11 +499,37 @@ export function determineBestMineToBuild(
         alternatives: [],
       };
     }
+    
+    // Calcular cuál sería la mejor mina basándose en ROI
+    const allMines = [
+      { type: 'metal' as const, stats: metalStats, roi: metalStats.roi },
+      { type: 'crystal' as const, stats: crystalStats, roi: crystalStats.roi },
+      { type: 'deuterium' as const, stats: deuteriumStats, roi: deuteriumStats.roi },
+    ].sort((a, b) => a.roi - b.roi);
+    
+    const bestMine = allMines[0];
+    const bestStats = bestMine.stats;
+    
+    // Calcular qué falta para construirla
+    const metalNeeded = Math.max(0, bestStats.cost.metal - resources.metal);
+    const crystalNeeded = Math.max(0, bestStats.cost.crystal - resources.crystal);
+    const energyNeeded = !hasEnoughEnergy[bestMine.type] ? bestStats.energyConsumption - resources.energy : 0;
+    
+    const missingParts: string[] = [];
+    if (metalNeeded > 0) missingParts.push(`${metalNeeded.toLocaleString()} metal`);
+    if (crystalNeeded > 0) missingParts.push(`${crystalNeeded.toLocaleString()} cristal`);
+    if (energyNeeded > 0) missingParts.push(`${energyNeeded} energía`);
+    
     return {
-      recommendation: null,
-      reason: `No hay recursos suficientes para ninguna construcción.`,
-      stats: null,
-      alternatives: [],
+      recommendation: bestMine.type,
+      reason: `Mejor opción por ROI (${bestMine.roi.toFixed(1)}h). Faltan: ${missingParts.join(', ')}`,
+      stats: bestStats,
+      alternatives: allMines.slice(1).map(m => ({
+        type: m.type,
+        reason: `ROI: ${m.roi.toFixed(1)}h`,
+        stats: m.stats,
+      })),
+      canAfford: false,
     };
   }
   

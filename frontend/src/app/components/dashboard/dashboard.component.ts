@@ -1,13 +1,14 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { ApiService, BotStatus, Resources, Planet, StorageInfo } from '../../services/api.service';
+import { FormsModule } from '@angular/forms';
+import { ApiService, BotStatus, Resources, Planet, StorageInfo, DataSyncStatus, MineLevels, TechnologyLevels, PlanetGameData } from '../../services/api.service';
 import { interval, Subscription } from 'rxjs';
 import { isFeatureEnabled } from '../../config/feature-flags.config';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, DatePipe],
+  imports: [DecimalPipe, DatePipe, FormsModule],
   template: `
     <div class="dashboard">
       <header class="header">
@@ -38,13 +39,117 @@ import { isFeatureEnabled } from '../../config/feature-flags.config';
             class="btn btn-danger">
             Cerrar Navegador
           </button>
+        </div>
+      </section>
+
+      <section class="data-sync" [class.disabled]="!status()?.loggedIn">
+        <h2>🔄 Sincronización de Datos</h2>
+        <div class="sync-controls">
+          <div class="sync-toggle">
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="dataSyncStatus()?.enabled"
+                (change)="toggleDataSync($event)"
+                [disabled]="!status()?.loggedIn">
+              <span class="slider"></span>
+            </label>
+            <span class="sync-label">
+              {{ dataSyncStatus()?.enabled ? 'Sincronización Activa' : 'Sincronización Inactiva' }}
+            </span>
+          </div>
+          <div class="sync-interval">
+            <label>Intervalo (segundos):</label>
+            <input
+              type="number"
+              [ngModel]="syncInterval()"
+              (ngModelChange)="onIntervalChange($event)"
+              min="10"
+              max="300"
+              [disabled]="!status()?.loggedIn || !!dataSyncStatus()?.enabled"
+              class="interval-input">
+          </div>
           <button
-            (click)="refreshData()"
-            [disabled]="!status()?.loggedIn"
-            class="btn btn-secondary">
-            Actualizar Datos
+            (click)="syncNow()"
+            [disabled]="!status()?.loggedIn || dataSyncStatus()?.isUpdating"
+            class="btn btn-secondary btn-sm">
+            {{ dataSyncStatus()?.isUpdating ? 'Sincronizando...' : 'Sincronizar Ahora' }}
           </button>
         </div>
+        @if (dataSyncStatus()?.lastUpdate) {
+          <div class="sync-info">
+            <span>Última actualización: {{ dataSyncStatus()!.lastUpdate | date:'medium' }}</span>
+            <span class="data-age" [class.stale]="(dataSyncStatus()?.dataAge ?? 0) > 120">
+              (hace {{ dataSyncStatus()!.dataAge }}s)
+            </span>
+          </div>
+        }
+        @if (cachedMineLevels() || cachedTechnologies()) {
+          <div class="cached-data">
+            <h4>Datos en Caché</h4>
+            @if (cachedMineLevels()) {
+              <div class="data-section">
+                <h5>🏭 Edificios @if (currentPlanetName()) { <span class="planet-tag">{{ currentPlanetName() }}</span> }</h5>
+                <div class="data-grid">
+                  <span>Metal: {{ cachedMineLevels()!.metal }}</span>
+                  <span>Cristal: {{ cachedMineLevels()!.crystal }}</span>
+                  <span>Deuterio: {{ cachedMineLevels()!.deuterium }}</span>
+                  <span>Solar: {{ cachedMineLevels()!.solar }}</span>
+                  <span>Satélites: {{ cachedMineLevels()!.solarSatellites }}</span>
+                </div>
+              </div>
+            }
+            @if (cachedTechnologies()) {
+              <div class="data-section">
+                <h5>🔬 Tecnologías</h5>
+                <div class="data-grid">
+                  @if (cachedTechnologies()!.energyTechnology) {
+                    <span>Energía: {{ cachedTechnologies()!.energyTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.laserTechnology) {
+                    <span>Láser: {{ cachedTechnologies()!.laserTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.ionTechnology) {
+                    <span>Iones: {{ cachedTechnologies()!.ionTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.hyperspaceTechnology) {
+                    <span>Hiperespacio: {{ cachedTechnologies()!.hyperspaceTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.plasmaTechnology) {
+                    <span>Plasma: {{ cachedTechnologies()!.plasmaTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.combustionDrive) {
+                    <span>Combustión: {{ cachedTechnologies()!.combustionDrive }}</span>
+                  }
+                  @if (cachedTechnologies()!.impulseDrive) {
+                    <span>Impulso: {{ cachedTechnologies()!.impulseDrive }}</span>
+                  }
+                  @if (cachedTechnologies()!.hyperspaceDrive) {
+                    <span>Propulsor Hip.: {{ cachedTechnologies()!.hyperspaceDrive }}</span>
+                  }
+                  @if (cachedTechnologies()!.espionageTechnology) {
+                    <span>Espionaje: {{ cachedTechnologies()!.espionageTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.computerTechnology) {
+                    <span>Ordenadores: {{ cachedTechnologies()!.computerTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.astrophysics) {
+                    <span>Astrofísica: {{ cachedTechnologies()!.astrophysics }}</span>
+                  }
+                  @if (cachedTechnologies()!.weaponsTechnology) {
+                    <span>Armas: {{ cachedTechnologies()!.weaponsTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.shieldingTechnology) {
+                    <span>Escudo: {{ cachedTechnologies()!.shieldingTechnology }}</span>
+                  }
+                  @if (cachedTechnologies()!.armourTechnology) {
+                    <span>Blindaje: {{ cachedTechnologies()!.armourTechnology }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
       </section>
 
       @if (status()?.loggedIn) {
@@ -502,6 +607,130 @@ import { isFeatureEnabled } from '../../config/feature-flags.config';
       padding: 0.25rem 0.5rem;
       font-size: 0.8rem;
     }
+
+    // Estilos para sincronización de datos
+    .data-sync {
+      background: #1e1e2e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #444;
+    }
+
+    .data-sync.disabled {
+      opacity: 0.6;
+    }
+
+    .sync-controls {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .sync-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .sync-label {
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .sync-interval {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sync-interval label {
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+
+    .interval-input {
+      width: 80px;
+      padding: 0.5rem;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #2d2d44;
+      color: #fff;
+      text-align: center;
+    }
+
+    .interval-input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .sync-info {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #2d2d44;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    .data-age {
+      margin-left: 0.5rem;
+      color: #28a745;
+    }
+
+    .data-age.stale {
+      color: #ffc107;
+    }
+
+    .cached-data {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #2d2d44;
+      border-radius: 8px;
+    }
+
+    .cached-data h4 {
+      margin: 0 0 0.75rem 0;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .data-section {
+      margin-bottom: 1rem;
+    }
+
+    .data-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .data-section h5 {
+      margin: 0 0 0.5rem 0;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    .data-grid {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+
+    .data-grid span {
+      background: #1a1a2e;
+      padding: 0.35rem 0.7rem;
+      border-radius: 4px;
+    }
+
+    .planet-tag {
+      background: #3a3a5e;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: normal;
+      margin-left: 0.5rem;
+    }
   `],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -518,13 +747,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loading = signal(false);
   error = signal<string | null>(null);
 
+  // Data Sync
+  dataSyncStatus = signal<DataSyncStatus | null>(null);
+  cachedMineLevels = signal<MineLevels | null>(null);
+  cachedTechnologies = signal<TechnologyLevels | null>(null);
+  cachedPlanets = signal<PlanetGameData[]>([]);
+  currentPlanetName = signal<string>('');
+  syncInterval = signal(60);
+
   ngOnInit(): void {
     this.checkStatus();
     this.loadTasks();
     this.loadSchedulerStatus();
+    this.loadDataSyncStatus();
     this.refreshSubscription = interval(10000).subscribe(() => {
-      if (this.status()?.loggedIn) {
-        this.refreshData();
+      // Solo refrescar datos si la sincronización está habilitada
+      if (this.status()?.loggedIn && this.dataSyncStatus()?.enabled) {
+        this.loadDataSyncStatus();
       }
       this.loadSchedulerStatus();
     });
@@ -705,6 +944,77 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         this.error.set('Error ejecutando tarea');
       },
+    });
+  }
+
+  // ========== SINCRONIZACIÓN DE DATOS ==========
+
+  loadDataSyncStatus(): void {
+    this.api.getDataSyncStatus().subscribe({
+      next: (status) => {
+        this.dataSyncStatus.set(status);
+        this.syncInterval.set(status.intervalSeconds);
+
+        // Cargar datos cacheados del juego
+        if (status.enabled) {
+          this.api.getGameData().subscribe({
+            next: (data) => {
+              // Guardar todos los planetas
+              if (data.planets) {
+                this.cachedPlanets.set(data.planets);
+              }
+
+              // Encontrar el planeta actual
+              const currentPlanet = data.planets?.find(p => p.id === data.currentPlanetId) || data.planets?.[0];
+              if (currentPlanet) {
+                this.cachedMineLevels.set(currentPlanet.mineLevels);
+                this.resources.set(currentPlanet.resources);
+                this.currentPlanetName.set(`${currentPlanet.name} ${currentPlanet.coordinates}`);
+              }
+              if (data.technologies) {
+                this.cachedTechnologies.set(data.technologies);
+              }
+            },
+            error: () => {},
+          });
+        }
+      },
+      error: () => console.error('Error cargando estado de sincronización'),
+    });
+  }
+
+  toggleDataSync(event: Event): void {
+    const enabled = (event.target as HTMLInputElement).checked;
+    if (enabled) {
+      this.api.startDataSync(this.syncInterval()).subscribe({
+        next: () => {
+          this.loadDataSyncStatus();
+          this.error.set('Sincronización de datos iniciada');
+        },
+        error: () => this.error.set('Error iniciando sincronización'),
+      });
+    } else {
+      this.api.stopDataSync().subscribe({
+        next: () => {
+          this.loadDataSyncStatus();
+          this.error.set('Sincronización de datos detenida');
+        },
+        error: () => this.error.set('Error deteniendo sincronización'),
+      });
+    }
+  }
+
+  onIntervalChange(value: number): void {
+    this.syncInterval.set(value);
+  }
+
+  syncNow(): void {
+    this.api.syncDataNow().subscribe({
+      next: () => {
+        this.loadDataSyncStatus();
+        this.error.set('Datos sincronizados');
+      },
+      error: () => this.error.set('Error sincronizando datos'),
     });
   }
 }

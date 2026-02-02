@@ -16,7 +16,7 @@ export const FEATURE_FLAGS: FeatureFlagsConfig = {
   },
   'expansion-policy': {
     id: 'expansion-policy',
-    enabled: false,
+    enabled: true,
     description: 'Política Expansionista - Feature en desarrollo',
   },
 };
